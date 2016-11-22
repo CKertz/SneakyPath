@@ -5,8 +5,13 @@
 
 using namespace std;
 #define INF = 99999;
+
 struct holder {
-	int hopCount;
+
+	int hopCount = 0;
+	vector <int> pathVisited;
+	int startPoint;
+	int endPoint;
 };
 void readData(vector<vector<int>>&edgeMatrix, vector<vector<int>>&flowMatrix)
 {
@@ -20,54 +25,68 @@ void readData(vector<vector<int>>&edgeMatrix, vector<vector<int>>&flowMatrix)
 	getline(inputfile, dummyLine);
 	while (inputfile)
 	{
-			inputfile >> matrixType;
-			if (matrixType == 'E' || matrixType == 'F')
-			{
-				if (inputfile.peek() == ',')
-					inputfile.ignore();
-				inputfile >> v1;
-				if (inputfile.peek() == ',')
-					inputfile.ignore();
-				inputfile >> v2;
-				if (inputfile.peek() == ',')
-					inputfile.ignore();
-				inputfile >> value3;
-				if (matrixType == 'E')
-					edgeMatrix[v1-1][v2-1] = value3;
-				if (matrixType == 'F')
-					flowMatrix[v1-1][v2-1] = value3;	
-			}
+		inputfile >> matrixType;
+		if (matrixType == 'E' || matrixType == 'F')
+		{
+			if (inputfile.peek() == ',')
+				inputfile.ignore();
+			inputfile >> v1;
+			if (inputfile.peek() == ',')
+				inputfile.ignore();
+			inputfile >> v2;
+			if (inputfile.peek() == ',')
+				inputfile.ignore();
+			inputfile >> value3;
+			if (matrixType == 'E')
+				edgeMatrix[v1 - 1][v2 - 1] = value3;
+			if (matrixType == 'F')
+				flowMatrix[v1 - 1][v2 - 1] = value3;
+		}
 	}
 }
 
-
-void floydWarshall(vector<vector<int>>&givenVector)
+void trafficUpdateFW(vector<vector<int>>&givenVector)
 {
-	/* givenVector[][] will be the output matrix that will finally have the shortest
-	givenVectorances between every pair of vertices */
-	int i, j, k;
 
-	/* Add all vertices one by one to the set of intermediate vertices.
-	---> Before start of a iteration, we have shortest givenVectorances between all
-	pairs of vertices such that the shortest givenVectorances consider only the
-	vertices in set {0, 1, 2, .. k-1} as intermediate vertices.
-	----> After the end of a iteration, vertex no. k is added to the set of
-	intermediate vertices and the set becomes {0, 1, 2, .. k} */
+	for (int k = 0; k < givenVector.size(); k++)
+	{
+		int updatedTraffic = 0;
+		for (int i = 0; i < givenVector.size(); i++)
+		{
+			for (int j = 0; j < givenVector.size(); j++)
+			{
+				if (givenVector[i][k] + givenVector[k][j] < givenVector[i][j])
+				{
+					updatedTraffic += givenVector[i][k] + givenVector[k][j];
+					givenVector[i][j] = givenVector[i][k] + givenVector[k][j];
+				}
+			}
+		}
+	}
+}
+void floydWarshall(vector<vector<int>>&givenVector, holder &dataHold)
+{
+
+	int i, j, k;
+	bool visited = false;
 	for (k = 0; k < givenVector.size(); k++)
 	{
-		// Pick all vertices as source one by one
 		for (i = 0; i < givenVector.size(); i++)
 		{
-			// Pick all vertices as destination for the
-			// above picked source
 			for (j = 0; j < givenVector.size(); j++)
 			{
 				// If vertex k is on the shortest path from
 				// i to j, then update the value of givenVector[i][j]
-				if (givenVector[i][k] + givenVector[k][j] < givenVector[i][j])// Any path tracking code should be added here
+				if (givenVector[i][k] + givenVector[k][j] < givenVector[i][j])
 				{
 					givenVector[i][j] = givenVector[i][k] + givenVector[k][j];
-					//givenVector[i][j]
+					
+					//trying to implement a tracking struct here
+					if (k == dataHold.startPoint-1)
+					{
+						dataHold.hopCount++;
+						dataHold.pathVisited.push_back(j);
+					}
 				}
 
 			}
@@ -75,8 +94,6 @@ void floydWarshall(vector<vector<int>>&givenVector)
 	}
 	for (int m = 0; m < givenVector.size(); m++) // set the diagonals to zero, no shortest path to themselves necessary
 		givenVector[m][m] = 0;
-	// Print the shortest givenVectorance matrix
-	//printSolution(givenVector);
 }
 
 /* A utility function to print solution */
@@ -99,11 +116,13 @@ void floydWarshall(vector<vector<int>>&givenVector)
 int main()
 {
 	ifstream inputfile;
+	vector<holder>dataHold;
 	vector<vector<int>>edgeMatrix; //using 2d vectors as my Matrix instead of arrays
 	vector<vector<int>>flowMatrix;
 	int n;
 	int startPoint;
 	int endPoint;
+	holder dataHolder;
 	
 	inputfile.open("inputFile.txt");
 
@@ -120,12 +139,16 @@ int main()
 	edgeMatrix.resize(n, vector<int>(n,99999)); // Assumption made we will not be using distances or traffic over 99999. This is "infinity", infinity cannot be used due to C++ restrictions
 	flowMatrix.resize(n, vector<int>(n,99999));
 	
+	dataHolder.endPoint = endPoint;
+	dataHolder.startPoint = startPoint;
+
 	cout << "arrays initialized" << endl;
 	readData(edgeMatrix, flowMatrix);
-	floydWarshall(edgeMatrix);
+	trafficUpdateFW(edgeMatrix);
+	//floydWarshall(edgeMatrix,dataHolder);
 	cout << "The shortest path from " << startPoint << " to " << endPoint << " is " 
 		 << edgeMatrix[startPoint-1][endPoint-1] << endl;
-	floydWarshall(flowMatrix);
+	floydWarshall(flowMatrix, dataHolder);
 	system("pause");
 	return 0;
 }
